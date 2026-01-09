@@ -1,150 +1,130 @@
-# 🐋 Polymarket Whale Alert Bot
+# 🎯 Polymarket Insider Detection Bot
 
-Polymarket'te büyük işlemleri **real-time** takip eden ve Telegram'a bildirim gönderen bot.
+Polymarket'te **insider trading pattern'lerini** tespit eden ve Telegram'a bildirim gönderen bot.
 
-## 🏗️ Hybrid Mimari
+## 🔍 Ne Yapar?
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    WebSocket                            │
-│         wss://ws-subscriptions-clob.polymarket.com      │
-│                                                         │
-│   last_trade_price events → Anlık tespit ($5K+ check)   │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│                   Data API                              │
-│            data-api.polymarket.com/trades               │
-│                                                         │
-│   Detay çekme: cüzdan adresi, market bilgisi, PnL       │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│                  Telegram Bot                           │
-│              Formatted alert gönderimi                  │
-└─────────────────────────────────────────────────────────┘
-```
+Gerçek insider vakalarından (Maduro, Nobel Prize) öğrenilen pattern'leri kullanarak şüpheli işlemleri tespit eder:
 
-**Neden Hybrid?**
-- **WebSocket**: Anlık tespit (< 1 saniye gecikme)
-- **Data API**: Cüzdan adresi, market detayları, kullanıcı bilgileri
-- İkisi birlikte = Hızlı + Detaylı
+- **Yeni cüzdan** (≤30 gün) + **büyük bahis**
+- **Az işlem** (≤10 trade) + **longshot** (≤%20)
+- **Yüksek hacim %** (market hacminin ≥%5'i)
+- **Yakında biten** market (24 saat içinde)
 
-## Özellikler
+## 📊 Sinyal Seviyeleri
 
-- **$5K+ işlemleri** takip eder
-- **Üç seviye alert**:
-  - 🐟 $5K-10K (Fish)
-  - 🐬 $10K-20K (Dolphin)  
-  - 🐋 $20K+ (Whale)
-- **Cüzdan bilgileri**: yaş, işlem sayısı, PnL
-- **Market bilgileri**: hacim, likidite, oran
-- **Dikkat çekici işaretler**: yeni cüzdan, ilk işlem, düşük olasılık + yüksek bahis
+| Seviye | Koşul | Emoji |
+|--------|-------|-------|
+| **ACIL** | Yakında bitiyor + başka sinyal | 🚨🚨 |
+| **ÇOK GÜVENİLİR** | 3+ sinyal | 🚨 |
+| **GÜVENİLİR** | Yeni cüzdan + (az işlem veya longshot) | 🔥 |
+| **ORTA** | 2 sinyal (diğer kombinasyonlar) | ⚠️ |
 
-## Örnek Bildirim
+## 📱 Örnek Bildirim
 
 ```
-🐋 POLYMARKET ALERT 🐋
+🔥 GÜVENİLİR 🔥
 
-Market: Will X happen by 2025?
+Will X announce Y by January 10?
 
-🟢 $25,000 → Yes @ %12
+🟢 $15,000 → Yes @ %12.5
 
-━━━━━━━━━━━━━━━━━━━━━━
-📊 Market Bilgileri:
-   • Toplam hacim: $150,000
-   • Likidite: $45,000
-   • Bu işlem/hacim: %16.7
+━━━━ 🎯 SİNYALLER ━━━━
+   🆕 Yeni Cüzdan (3 gün)
+   👶 Az İşlem (4 işlem)
+   🎰 Longshot Bahis (%12.5)
+   📍 Güvenilirlik: GÜVENİLİR
 
-👛 Cüzdan Bilgileri:
-   • Adres: 0x31a5...b2c4
-   • Yaş: 3 gün
-   • Toplam işlem: 2
-   • PnL: 📈 $1,200
+━━━━ 📊 MARKET ━━━━
+   Hacim: $250,000
+   Likidite: $80,000
+   Bu işlem/Hacim: %6.0
 
-⚠️ Dikkat Çekici:
-   • İlk/erken işlem
-   • Yeni cüzdan (3 gün)
-   • Düşük olasılık + yüksek bahis
+━━━━ 👛 CÜZDAN ━━━━
+   0x31a5...86e9
+   Yaş: 3 gün ⚠️
+   İşlem: 4 ⚠️
+   PnL: 🟢 $1,200
+   ROI: 📈 %15.2
+   İlk işlem: 2026-01-06
 
-━━━━━━━━━━━━━━━━━━━━━━
-🔗 Polymarket'te Gör
+🔗 Polymarket
 ```
 
-## Kurulum
+## 💰 Cashout Takibi
+
+Bot, bildirdiği BUY işlemlerinin SELL'lerini (cashout) de takip eder:
+
+```
+💰💰 CASHOUT DETECTED 💰💰
+
+Will X happen?
+
+🔴 $18,000 ← Yes SATIŞ
+
+━━━━ 📊 İŞLEM DETAYI ━━━━
+   Alış: $12,000 @ %15.0
+   Satış: $18,000 @ %22.5
+   🟢 Kar/Zarar: $6,000 (%50.0)
+
+━━━━ 👛 CÜZDAN ━━━━
+   0x31a5...86e9
+   Toplam PnL: 🟢 $50,000
+
+🔗 Polymarket
+```
+
+## 🚀 Kurulum
 
 ### 1. Telegram Bot Oluşturma
 
-1. Telegram'da [@BotFather](https://t.me/BotFather)'a gidin
+1. [@BotFather](https://t.me/BotFather)'a gidin
 2. `/newbot` yazın
-3. Bot adı ve username girin
-4. Size verilen **token**'ı kaydedin
+3. Token'ı kaydedin
 
 ### 2. Chat ID Alma
 
-1. [@userinfobot](https://t.me/userinfobot)'a gidin
-2. `/start` yazın
-3. Size verilen **ID**'yi kaydedin
+**Kişisel:** [@userinfobot](https://t.me/userinfobot)'a `/start` yazın
 
-**Grup için:**
-- Botu gruba ekleyin
-- Grupta bir mesaj yazın
-- `https://api.telegram.org/bot<TOKEN>/getUpdates` adresinden grup ID'sini alın (negatif sayı)
+**Grup için:** Botu gruba ekleyin, `https://api.telegram.org/bot<TOKEN>/getUpdates` adresinden grup ID'sini alın (negatif sayı)
 
-### 3. Botu Çalıştırma
+### 3. Çalıştırma
 
 ```bash
 # Klonla
 git clone <repo-url>
 cd polymarket-bot
 
-# Dependencies yükle
+# Virtual environment (opsiyonel)
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate  # Windows
+
+# Dependencies
 pip install -r requirements.txt
 
-# Environment variables ayarla
-export TELEGRAM_BOT_TOKEN="your_token_here"
-export TELEGRAM_CHAT_ID="your_chat_id_here"
+# Environment variables
+export TELEGRAM_BOT_TOKEN="your_token"
+export TELEGRAM_CHAT_ID="your_chat_id"
 
 # Çalıştır
 python polymarket_whale_bot.py
 ```
 
-### 4. (Opsiyonel) Docker ile Çalıştırma
-
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY polymarket_whale_bot.py .
-CMD ["python", "polymarket_whale_bot.py"]
-```
-
-```bash
-docker build -t polymarket-bot .
-docker run -d \
-  -e TELEGRAM_BOT_TOKEN="your_token" \
-  -e TELEGRAM_CHAT_ID="your_chat_id" \
-  polymarket-bot
-```
-
-### 5. (Opsiyonel) Systemd Service
+### 4. Systemd Service (Opsiyonel)
 
 ```ini
 # /etc/systemd/system/polymarket-bot.service
 [Unit]
-Description=Polymarket Whale Alert Bot
+Description=Polymarket Insider Detection Bot
 After=network.target
 
 [Service]
 Type=simple
-User=your_user
-WorkingDirectory=/path/to/polymarket-bot
+WorkingDirectory=/root/polymarket-bot
 Environment=TELEGRAM_BOT_TOKEN=your_token
 Environment=TELEGRAM_CHAT_ID=your_chat_id
-ExecStart=/usr/bin/python3 polymarket_whale_bot.py
+ExecStart=/root/polymarket-bot/venv/bin/python polymarket_whale_bot.py
 Restart=always
 RestartSec=10
 
@@ -153,90 +133,55 @@ WantedBy=multi-user.target
 ```
 
 ```bash
+sudo systemctl daemon-reload
 sudo systemctl enable polymarket-bot
 sudo systemctl start polymarket-bot
+sudo journalctl -fu polymarket-bot  # Logları izle
 ```
 
-## Konfigürasyon
+## ⚙️ Konfigürasyon
 
-`polymarket_whale_bot.py` içinde `Config` class'ını düzenleyebilirsiniz:
+`polymarket_whale_bot.py` içinde `Config` class'ını düzenleyin:
 
 ```python
 @dataclass
 class Config:
-    # Minimum alert miktarı ($)
-    min_trade_amount: float = 5000
-    
-    # Kaç saniyede bir kontrol
-    poll_interval: int = 30
+    min_trade_amount: float = 4000      # Minimum işlem ($)
+    max_wallet_age_days: int = 30       # Yeni cüzdan eşiği
+    max_trade_count: int = 10           # Az işlem eşiği
+    max_probability_longshot: float = 20 # Longshot eşiği (%)
+    min_volume_percentage: float = 5    # Hacim % eşiği
+    poll_interval: int = 10             # Kontrol sıklığı (saniye)
 ```
 
-## Alert Seviyeleri
+## 🔌 API Endpoints
 
-| Seviye | Miktar | Emoji |
-|--------|--------|-------|
-| Fish | $5K - $10K | 🐟 |
-| Dolphin | $10K - $20K | 🐬 |
-| Whale | $20K+ | 🐋 |
+| Endpoint | Amaç | Sıklık |
+|----------|------|--------|
+| `data-api.polymarket.com/trades` | $4K+ işlemler | 10sn |
+| `gamma-api.polymarket.com/public-profile` | Cüzdan PnL, volume | Her işlem |
+| `data-api.polymarket.com/activity` | İşlem sayısı, yaş | Her işlem |
+| `gamma-api.polymarket.com/markets` | Market cache | 5dk |
+| `gamma-api.polymarket.com/events` | Hacim (fallback) | Gerektiğinde |
 
-## API Notları
+## 📚 Araştırma Kaynakları
 
-### WebSocket (Real-time) 🔴
-```
-wss://ws-subscriptions-clob.polymarket.com/ws/market
-```
-- `last_trade_price` event'leri dinleniyor
-- Tüm aktif market'lerin asset_id'lerine subscribe
-- Her 5 dakikada market listesi güncelleniyor
+Bot, gerçek insider vakalarından öğrenilen pattern'leri kullanır:
 
-### Data API (Detaylar) 📊
-```
-https://data-api.polymarket.com/trades
-```
-- Cüzdan adresi (proxyWallet)
-- Market bilgileri (title, slug)
-- `filterType=CASH&filterAmount=5000` ile filtreleme
+- **Maduro Vakası**: 3 yeni cüzdan, $630K profit, olay öncesi günlerde oluşturulmuş
+- **Nobel Prize**: Tek cüzdan, tek işlem, $50K longshot bahis
 
-### Gamma API (Market Cache) 📈
-```
-https://gamma-api.polymarket.com/markets
-```
-- Aktif market listesi
-- Asset ID → Market eşleştirmesi
-- Volume, liquidity bilgileri
+## ⚠️ Limitasyonlar
 
-## Bilinen Limitasyonlar
+1. **Cluster tespiti yok** - Birbirine bağlı cüzdanları tespit edemez
+2. **10sn polling** - Insider pozisyon almış olabilir
+3. **False positive** - Her sinyal insider değil
+4. **Likidite** - Sinyal görseniz bile giriş yapamayabilirsiniz
 
-1. **WebSocket desteği yok**: Şu an polling yapıyor. Daha hızlı bildirim için WebSocket eklenebilir.
-2. **Cüzdan yaşı**: Her zaman alınamayabiliyor, API'ye bağlı.
-3. **Trade geçmişi**: Bazı cüzdanlar için eksik olabilir.
-
-## Geliştirme Fikirleri
-
-- [ ] WebSocket ile real-time tracking
-- [ ] Whale wallet watchlist
-- [ ] Copy-trade özelliği
-- [ ] Web dashboard
-- [ ] Historical analiz
-
-## Sorun Giderme
-
-**Bot çalışıyor ama bildirim gelmiyor:**
-1. Token ve chat ID'yi kontrol edin
-2. Botu Telegram'da `/start` ile başlatın
-3. Grup için bot'un mesaj atma yetkisi olduğundan emin olun
-
-**Rate limit hatası:**
-- `poll_interval`'ı artırın (örn: 60 saniye)
-
-**Market bulunamadı hatası:**
-- Normal, bazı tokenlar için market bilgisi alınamayabilir
-- Bot yine de işlemi bildirecek
-
-## Lisans
+## 📄 Lisans
 
 MIT
 
-## Disclaimer
+## ⚠️ Disclaimer
 
-Bu bot sadece bilgilendirme amaçlıdır. Yatırım tavsiyesi değildir. Polymarket'te işlem yapmak risk içerir.
+Bu bot sadece bilgilendirme amaçlıdır. Yatırım tavsiyesi değildir. Polymarket'te işlem yapmak risk içerir. Insider trading yasadışıdır.
